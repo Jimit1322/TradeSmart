@@ -1,3 +1,6 @@
+'''
+    Module for backtesting strategies
+'''
 import pandas as pd
 #import matplotlib.pyplot as plt
 import yfinance as yf
@@ -8,21 +11,18 @@ from params import params
 # from nsetools import Nse
 # import nsepython
 
-# Stock data: https://archives.nseindia.com/content/equities/EQUITY_L.csv
-# Yahoo API doc: https://python-yahoofinance.readthedocs.io/en/latest/api.html
-# index data: https://medium.com/@TejasEkawade/getting-indian-stock-prices-using-python-19f8c83d2015
-
 def check_trades(trades,
                  day,
                  profit, loss,
                  win, lose,
                  holding_period,
                  cumu_return):
+    '''
+        Checks all the trades if they have hit the target or SL. If a target is hit, register a win.
+        If SL is hit (trailed or otherwise), register a loss.
+    '''
     current_date = day.name
     for trade in trades[:]: #Looping over trades[:] instead of trades as we are modifying
-
-        # if(trade["date"] == current_date):
-        #     check_5min(trade, ticker)
 
         if(trade["target"] <= day["High"] and trade["target"] >= day["Low"]):
             #Trade success
@@ -49,10 +49,15 @@ def check_trades(trades,
         mid_target_price = (trade["target"] + trade["entry"]) / 2
         if(mid_target_price <= day["High"] and mid_target_price >= day["Low"]):
             trade["stoploss"] = trade["entry"]
-    #print(profit, loss, win, lose)
+
     return profit, loss, win, lose, holding_period, cumu_return
 
 def backtest(df, param):
+    '''
+        For each stock scan through the historic data and check if a strategy setup is met.
+        If yes, create a trade. 
+        While iterating over the data, we create trades and check existing trades.
+    '''
     win = lose = 0
     profit = loss = 0
     trades = []
@@ -62,21 +67,16 @@ def backtest(df, param):
 
     if param["strat"] == "EMA":
 
-        #Creating Exponential Moving Average
-        df["EMA"] = df['Close'].ewm(span=param["ema"], adjust=False).mean()
-
-        for k in range(100 + param["ema"], len(df)):
-
-            #hp.check_entry(df, i, trades, potential_trades)
+        for day in range(100 + param["ema"], len(df)):
 
             profit, loss, win, lose, holding_period, cumu_return = check_trades(trades,
-                                                                                df.iloc[k],
+                                                                                df.iloc[day],
                                                                                 profit, loss,
                                                                                 win, lose,
                                                                                 holding_period,
                                                                                 cumu_return)
 
-            st.ema(df, k, param, False, trades, potential_trades)
+            st.ema(df, day, param, False, trades, potential_trades)
 
         cumu_return = cumu_return - 1
         cagr = hp.calculate_cagr(1, 1 + cumu_return, holding_period)
@@ -85,15 +85,10 @@ def backtest(df, param):
         profit, loss = round(profit, 2), round(loss, 2)
         return win, lose, profit, loss, round(cumu_return, 2), cagr, holding_period
 
-    # elif(param["strat"] == "index"):
-    #     st.index(df)
-
-
-def is_44EMA(df):
-
-    #Creating Exponential Moving Average
-    df['EMA'] = df['Close'].ewm(span=44, adjust=False).mean()
-
+def is_ema(df):
+    '''
+        Check for the EMA setup on the present day
+    '''
     upper_bound = df["EMA"].iloc[-1] * 1.02
     lower_bound = df["EMA"].iloc[-1] * 0.98
     if not (df["Low"].iloc[-1] > upper_bound or df["High"].iloc[-1] < lower_bound):
@@ -105,24 +100,22 @@ def is_44EMA(df):
         if(slope1 > 0.1 and slope2 > 0.1):
             return True
 
-        return False
+    return False
 
 
 nifty500_stocks = pd.read_csv('data/nifty500.csv')
 
-TP = [0 for param in params]
-TL = [0 for param in params]
-C = 0
-H = 0
-pf_stocks = {}
-
 for i in enumerate(params):
     i = i[0]
     if params[i]["strat"] == "index":
-        pivots = hp.get_pivots_index("Nifty 500", params[i]["pivot_window"])
+        pivots = hp.get_pivots_index(params[i])
         sector_data = {}
-    elif params[i]["strat"] == "EMA":
+    if params[i]["strat"] == "EMA":
         print("Stock\t\t\tWin\tLose\tP\tL\tPF\tReturn\tCAGR")
+        TP = [0 for param in params]
+        TL = [0 for param in params]
+        C = 0
+        H = 0
     for index, row in nifty500_stocks.iterrows():
         stock = yf.Ticker(row['SYMBOL'] + ".NS")
         listing_date = hp.parse_date(row['DATE OF LISTING'], "%d-%b-%Y", "%Y-%m-%d")
@@ -135,39 +128,12 @@ for i in enumerate(params):
 
         if params[i]["strat"] == "index":
             benchmark_data = []
-            for p in enumerate(pivots):
-                p = p[0]
-                q = p + 1
-                if q >= len(pivots):
-                    continue
-                
-                benchmark_change = round((pivots[q][1] - pivots[p][1]) * 100/pivots[p][1], 2)
-                benchmark_data.append(benchmark_change)
-
-                data_p = df_D[df_D.index == pivots[p][0]]
-                data_q = df_D[df_D.index == pivots[q][0]]
-
-                if not data_p.empty and not data_q.empty:
-                    if pivots[p][2] == 'H':
-                        price_change = (data_q["Low"].values[0] - data_p["High"].values[0])/ data_p["High"].values[0]
-                    else:
-                        price_change = (data_q["High"].values[0] - data_p["Low"].values[0])/ data_p["Low"].values[0]
-
-                    price_change = round(price_change, 2)
-                else:
-                    price_change = "NaN"
-
-                if row["INDUSTRY"] in sector_data:
-                    if row["SYMBOL"] in sector_data[row["INDUSTRY"]]:
-                        sector_data[row["INDUSTRY"]][row["SYMBOL"]].append(price_change)
-                    else:
-                        sector_data[row["INDUSTRY"]][row["SYMBOL"]] = [price_change]
-                else:
-                    sector_data[row["INDUSTRY"]] = { row["SYMBOL"]: [price_change] }
+            st.index(df_D, pivots, benchmark_data, sector_data, row)
 
         if params[i]["strat"] == "EMA":
-            if is_44EMA(df_D):
-                pf_stocks[row['SYMBOL']] = [0 for param in params]
+            #Creating Exponential Moving Average
+            df_D['EMA'] = df_D['Close'].ewm(span=params[i]["ema"], adjust=False).mean()
+            if is_ema(df_D):
                 s, f, P, L, c_r, c, h = backtest(df_D, params[i])
 
                 if L == 0:
@@ -178,7 +144,6 @@ for i in enumerate(params):
                 TP[i] = TP[i] + P
                 TL[i] = TL[i] + L
 
-                pf_stocks[row['SYMBOL']][i] = P/L
                 if len(row['SYMBOL']) > 7:
                     print(f"{row['SYMBOL']}\t\t{s}\t{f}\t{P}\t{L}\t{round(P/L, 2)}\t{c_r}\t{c}")
                 else:
@@ -191,11 +156,24 @@ for i in enumerate(params):
         print(f"Profit Factor: {TP[i]/TL[i]}")
         print(f"Net CAGR: {C/H}")
     elif params[i]["strat"] == "index":
+        data = []
+        row = ['Date','Nifty500']
+        for sector, stocks in sector_data.items():
+            row.append(hp.mapper[sector])
+        data.append(row)
         for k in enumerate(benchmark_data):
             k = k[0]
-            print(f"Benchmark: {benchmark_data[k]}")
+            row = [f"{pivots[k][0]} - {pivots[k+1][0]}",benchmark_data[k]]
             for sector, stocks in sector_data.items():
-                total = 0
+                T = 0
+                S = 0
                 for stock, change in stocks.items():
-                    total += change[k]
-                print(f"{sector}:\t\t{round(total * 100/len(stocks), 2)}")
+                    if change[k] == "NaN":
+                        continue
+                    S += 1
+                    T += change[k]
+                row.append(round(T * 100/S, 2))
+            data.append(row)
+
+        # Write data to the CSV file
+        pd.DataFrame(data).to_csv('output.csv', index=False)

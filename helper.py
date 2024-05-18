@@ -6,6 +6,30 @@ from datetime import datetime, timedelta
 from nselib import capital_market
 import pandas as pd
 
+mapper = {
+    'Financial Services': 'Finserv', 
+    'Diversified': 'Diverse', 
+    'Capital Goods': 'Cap Goods',
+    'Construction Materials': 'Construct. Mat.', 
+    'Chemicals': 'Chemicals', 
+    'Healthcare': 'Health', 
+    'Power': 'Power', 
+    'Metals & Mining': 'Metal', 
+    'Services': 'Services', 
+    'Oil Gas & Consumable Fuels': 'OilGas', 
+    'Fast Moving Consumer Goods': 'FMCG', 
+    'Consumer Services': 'Cons. Serv.', 
+    'Information Technology': 'IT', 
+    'Textiles': 'Textiles', 
+    'Automobile and Auto Components': 'Auto', 
+    'Consumer Durables': 'Cons. Dura.', 
+    'Telecommunication': 'Telecom', 
+    'Realty': 'Realty', 
+    'Forest Materials': 'Forest Mat.', 
+    'Construction': 'Cons.', 
+    'Media Entertainment & Publication': 'Media'
+}
+
 def parse_date(date, format_from, format_to, delta = 0):
     '''
         Parse the input date string using datetime.strptime
@@ -54,47 +78,10 @@ def pivot_helper(df, p_window, i, result, level, multiplier):
 
     return result, 1
 
-def get_pivots(df, p_window, start, end):
+def filter_pivots(pivots):
     '''
-        Find pivots for the input stock dataframe over a certain period
+        Pivots filter
     '''
-    p_window = sorted(p_window, reverse=True)
-
-    result = []
-
-    i = start
-    while i <= end:
-        result, jump = pivot_helper(df, p_window, i, result, "Low", -1)
-        i = i + jump
-
-    i = start
-    while i <= end:
-        result, jump = pivot_helper(df, p_window, i, result, "High", 1)
-        i = i + jump
-
-    return sorted(result, key=lambda x: x[0])
-
-def get_pivots_index(index, p_window):
-    '''
-        Get pivots for an index. Index data is not supplied by yahoo finance
-    '''
-    df = capital_market.index_data(index=index,
-                                   from_date='01-04-2024',
-                                   to_date=datetime.today().strftime("%d-%m-%Y"))
-
-    df['TIMESTAMP'] = pd.to_datetime(df['TIMESTAMP'], format='%d-%m-%Y')
-    df = df.sort_values('TIMESTAMP').reset_index(drop=True)
-
-    df = df.drop(['INDEX_NAME', 'TRADED_QTY', 'TURN_OVER'], axis = 1)
-
-    df = df.rename(columns={'OPEN_INDEX_VAL': 'Open',
-                            'HIGH_INDEX_VAL': 'High',
-                            'CLOSE_INDEX_VAL': 'Close',
-                            'LOW_INDEX_VAL': 'Low'})
-
-    df['TIMESTAMP'] = timestamp_to_date(pd.to_datetime(df['TIMESTAMP']).dt)
-
-    pivots = get_pivots(df, p_window, 0, len(df) - 1)
     filtered_pivots = []
     high = 0
     low = float('inf')
@@ -134,6 +121,52 @@ def get_pivots_index(index, p_window):
         low = float('inf')
 
     return filtered_pivots
+
+def get_pivots(df, p_window, start, end):
+    '''
+        Find pivots for the input stock dataframe over a certain period
+    '''
+    p_window = sorted(p_window, reverse=True)
+
+    result = []
+
+    i = start
+    while i <= end:
+        result, jump = pivot_helper(df, p_window, i, result, "Low", -1)
+        i = i + jump
+
+    i = start
+    while i <= end:
+        result, jump = pivot_helper(df, p_window, i, result, "High", 1)
+        i = i + jump
+
+    return sorted(result, key=lambda x: x[0])
+
+def get_pivots_index(param):
+    '''
+        Get pivots for an index. Index data is not supplied by yahoo finance
+    '''
+    p_window = param["pivot_window"]
+    index = param["index"]
+    from_date = param["from"]
+    df = capital_market.index_data(index=index,
+                                   from_date=from_date,
+                                   to_date=datetime.today().strftime("%d-%m-%Y"))
+
+    df['TIMESTAMP'] = pd.to_datetime(df['TIMESTAMP'], format='%d-%m-%Y')
+    df = df.sort_values('TIMESTAMP').reset_index(drop=True)
+
+    df = df.drop(['INDEX_NAME', 'TRADED_QTY', 'TURN_OVER'], axis = 1)
+
+    df = df.rename(columns={'OPEN_INDEX_VAL': 'Open',
+                            'HIGH_INDEX_VAL': 'High',
+                            'CLOSE_INDEX_VAL': 'Close',
+                            'LOW_INDEX_VAL': 'Low'})
+
+    df['TIMESTAMP'] = timestamp_to_date(pd.to_datetime(df['TIMESTAMP']).dt)
+
+    pivots = get_pivots(df, p_window, 0, len(df) - 1)
+    return filter_pivots(pivots)
 
 def check_entry(df, i, trades, potential_trades):
     '''

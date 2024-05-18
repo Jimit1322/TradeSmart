@@ -1,18 +1,23 @@
+'''
+  Module for defining trading parameters
+'''
 params = [
-    # {
-    #     "ema": 44,
-    #     "trend_coefficient": 0.15,
-    #     "adjusted_entry_coefficient": 0.01,
-    #     "target": 0.08,
-    #     "sl": 0.02,
-    #     "window": 50,
-    #     "strat": "EMA",
-    #     "pivot_window": [4, 6]
-    # },
     {
-        "strat": "index",
-        "pivot_window": [5, 10]
-    }
+        "ema": 44,
+        "trend_coefficient": 0.15,
+        "adjusted_entry_coefficient": 0.01,
+        "target": 0.08,
+        "sl": 0.02,
+        "window": 50,
+        "strat": "EMA",
+        "pivot_window": [4, 6]
+    },
+    # {
+    #     "strat": "index",
+    #     "pivot_window": [5, 10],
+    #     "index": "Nifty 500",
+    #     "from": '01-01-2021'
+    # }
 ]
 
 API_KEY = 'GY7N4KU8V7BVEUNV'

@@ -1,0 +1,3 @@
+Stock data: https://archives.nseindia.com/content/equities/EQUITY_L.csv
+Yahoo API doc: https://python-yahoofinance.readthedocs.io/en/latest/api.html
+index data: https://medium.com/@TejasEkawade/getting-indian-stock-prices-using-python-19f8c83d2015
