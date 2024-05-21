@@ -25,7 +25,6 @@ def check_trades(trades,
     for trade in trades[:]: #Looping over trades[:] instead of trades as we are modifying
 
         if(trade["target"] <= day["High"] and trade["target"] >= day["Low"]):
-            #Trade success
             win += 1
             profit += trade["multiplier"] * (trade["target"] - trade["entry"])/trade["entry"]
             cumu_return *= trade["target"]/trade["entry"]
@@ -35,8 +34,6 @@ def check_trades(trades,
             continue
 
         if(trade["stoploss"] <= day["High"] and trade["stoploss"] >= day["Low"]):
-
-            #Trade failure
             lose = lose + 1
             loss = loss + trade["multiplier"] * (trade["entry"] - trade["stoploss"])/trade["entry"]
             cumu_return *= trade["stoploss"]/trade["entry"]
@@ -52,89 +49,105 @@ def check_trades(trades,
 
     return profit, loss, win, lose, holding_period, cumu_return
 
-def backtest(df, param):
+def backtest(df_data, param):
     '''
-        For each stock scan through the historic data and check if a strategy setup is met.
+        For each stock, scan through the historic data and check if a strategy setup is met.
         If yes, create a trade. 
         While iterating over the data, we create trades and check existing trades.
     '''
-    win = lose = 0
-    profit = loss = 0
-    trades = []
-    potential_trades = []
-    holding_period = 0
-    cumu_return = 1
+    for df in df_data.values():
+        win = lose = 0
+        profit = loss = 0
+        trades = []
+        holding_period = 0
+        cumu_return = 1
 
-    if param["strat"] == "EMA":
+        if param["strat"] == "EMA":
 
-        for day in range(100 + param["ema"], len(df)):
+            for day in range(100 + param["ema"], len(df)):
 
-            profit, loss, win, lose, holding_period, cumu_return = check_trades(trades,
-                                                                                df.iloc[day],
-                                                                                profit, loss,
-                                                                                win, lose,
-                                                                                holding_period,
-                                                                                cumu_return)
+                profit, loss, win, lose, holding_period, cumu_return = check_trades(trades,
+                                                                                    df.iloc[day],
+                                                                                    profit, loss,
+                                                                                    win, lose,
+                                                                                    holding_period,
+                                                                                    cumu_return)
 
-            st.ema(df, day, param, False, trades, potential_trades)
+                st.ema(df, day, param, trades)
 
-        cumu_return = cumu_return - 1
-        cagr = hp.calculate_cagr(1, 1 + cumu_return, holding_period)
+            cumu_return = cumu_return - 1
+            cagr = hp.calculate_cagr(1, 1 + cumu_return, holding_period)
 
-        #Backtesting completed, check profits and losses
-        profit, loss = round(profit, 2), round(loss, 2)
-        return win, lose, profit, loss, round(cumu_return, 2), cagr, holding_period
+            #Backtesting completed, check profits and losses
+            profit, loss = round(profit, 2), round(loss, 2)
+            return win, lose, profit, loss, round(cumu_return, 2), cagr, holding_period
 
-def is_ema(df):
+def is_ema(df_data):
     '''
-        Check for the EMA setup on the present day
+        Check for the EMA setup on the present candle
     '''
-    upper_bound = df["EMA"].iloc[-1] * 1.02
-    lower_bound = df["EMA"].iloc[-1] * 0.98
-    if not (df["Low"].iloc[-1] > upper_bound or df["High"].iloc[-1] < lower_bound):
+    upper_bound = df_data["EMA"].iloc[-1] * 1.02
+    lower_bound = df_data["EMA"].iloc[-1] * 0.98
+    if not (df_data["Low"].iloc[-1] > upper_bound or df_data["High"].iloc[-1] < lower_bound):
 
-        slope1 = hp.get_slope(df, 25, -1)
-        slope2 = hp.get_slope(df, 25, -26)
+        slope1 = hp.get_slope(df_data, 25, -1)
+        slope2 = hp.get_slope(df_data, 25, -26)
 
-        #Check uptrend
-        if(slope1 > 0.1 and slope2 > 0.1):
-            return True
+        return (slope1 > 0.1 and slope2 > 0.1)
 
     return False
 
+def check_price_action(df_data, param):
+    '''
+        Check if stock is taking support on any daily, weekly, monthly pivots
+        Reliability of pivots: monthly > weekly > daily
+    '''
+    valid_pivots = {
+        "w": hp.get_support_levels(df_data['1wk'], param["pivot_w"], 0.05),
+        "m": hp.get_support_levels(df_data['1mo'], param["pivot_m"], 0.1),
+    }
+    support = len(valid_pivots["m"]) + len(valid_pivots["w"]) != 0
+    return support, valid_pivots["w"], valid_pivots["m"]
 
-nifty500_stocks = pd.read_csv('data/nifty500.csv')
 
 for i in enumerate(params):
     i = i[0]
-    if params[i]["strat"] == "index":
-        pivots = hp.get_pivots_index(params[i])
-        sector_data = {}
+    nifty500_stocks = pd.read_csv(f'data/{params[i]["index"]}.csv')
     if params[i]["strat"] == "EMA":
-        print("Stock\t\t\tWin\tLose\tP\tL\tPF\tReturn\tCAGR")
         TP = [0 for param in params]
         TL = [0 for param in params]
         C = 0
         H = 0
+        data = [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "CAGR"]]
+    if params[i]["strat"] == "index":
+        pivots = hp.get_index_pivots(params[i])
+        sector_data = {}
+    if params[i]["strat"] == "price-action":
+        ema = [ ['Stock'] ]
+        data = [ [] ]
+
     for index, row in nifty500_stocks.iterrows():
         stock = yf.Ticker(row['SYMBOL'] + ".NS")
         listing_date = hp.parse_date(row['DATE OF LISTING'], "%d-%b-%Y", "%Y-%m-%d")
-        df_D = stock.history(start=listing_date, interval='1d')
-        if df_D.empty:
-            print("Dataframe is empty")
-            continue
-        df_D = df_D.drop(['Dividends', 'Stock Splits'], axis = 1)
-        df_D.index = hp.timestamp_to_date(df_D.index)
+        df_dict = {}
+        for tf in params[i]["tfs"]:
+            df_dict[tf] = stock.history(start=listing_date, interval=tf)
+            if df_dict[tf].empty:
+                print("Dataframe is empty")
+                continue
+            df_dict[tf] = df_dict[tf].drop(['Dividends', 'Stock Splits'], axis = 1)
+            df_dict[tf].index = hp.timestamp_to_date(df_dict[tf].index)
+
+            #Creating Exponential Moving Average
+            df_dict[tf]['EMA'] = df_dict[tf]['Close'].ewm(span=params[i]["ema"],adjust=False).mean()
 
         if params[i]["strat"] == "index":
             benchmark_data = []
-            st.index(df_D, pivots, benchmark_data, sector_data, row)
+            st.index(df_dict, pivots, benchmark_data, sector_data, row)
 
         if params[i]["strat"] == "EMA":
-            #Creating Exponential Moving Average
-            df_D['EMA'] = df_D['Close'].ewm(span=params[i]["ema"], adjust=False).mean()
-            if is_ema(df_D):
-                s, f, P, L, c_r, c, h = backtest(df_D, params[i])
+            if is_ema(df_dict[params[i]["tfs"][0]]):
+                s, f, P, L, c_r, c, h = backtest(df_dict, params[i])
 
                 if L == 0:
                     continue
@@ -144,36 +157,51 @@ for i in enumerate(params):
                 TP[i] = TP[i] + P
                 TL[i] = TL[i] + L
 
-                if len(row['SYMBOL']) > 7:
-                    print(f"{row['SYMBOL']}\t\t{s}\t{f}\t{P}\t{L}\t{round(P/L, 2)}\t{c_r}\t{c}")
-                else:
-                    print(f"{row['SYMBOL']}\t\t\t{s}\t{f}\t{P}\t{L}\t{round(P/L, 2)}\t{c_r}\t{c}")
+                data.append([row["SYMBOL"], s, f, P, L, round(P/L, 2), c_r, c])
 
+        if params[i]["strat"] == "price-action":
+            S, s_w, s_m = check_price_action(df_dict, params[i])
+            if S:
+                if is_ema(df_dict[params[i]["tfs"][0]]):
+                    ema.append([row["SYMBOL"]])
+                else:
+                    data.append([row["SYMBOL"]])
 
 for i in enumerate(params):
     i = i[0]
     if params[i]["strat"] == "EMA":
-        print(f"Profit Factor: {TP[i]/TL[i]}")
-        print(f"Net CAGR: {C/H}")
+        data.extend([[], ["Profit Factor:", round(TP[i]/TL[i], 2)], ["Net CAGR:", round(C/H, 2)]])
+        pd.DataFrame(data).to_csv(f'{params[i]["strat"]}.csv', index=False, header=False)
+    elif params[i]["strat"] == "price-action":
+        ema.extend(data)
+        pd.DataFrame(ema).to_csv(f'{params[i]["strat"]}.csv', index=False, header=False)
     elif params[i]["strat"] == "index":
-        data = []
-        row = ['Date','Nifty500']
-        for sector, stocks in sector_data.items():
-            row.append(hp.mapper[sector])
-        data.append(row)
         for k in enumerate(benchmark_data):
             k = k[0]
-            row = [f"{pivots[k][0]} - {pivots[k+1][0]}",benchmark_data[k]]
+            if k%2 == 0:
+                sector_mean = {}
             for sector, stocks in sector_data.items():
                 T = 0
                 S = 0
+                if hp.mapper[sector] not in sector_mean:
+                    sector_mean[hp.mapper[sector]] = []
                 for stock, change in stocks.items():
                     if change[k] == "NaN":
                         continue
                     S += 1
                     T += change[k]
-                row.append(round(T * 100/S, 2))
-            data.append(row)
-
-        # Write data to the CSV file
-        pd.DataFrame(data).to_csv('output.csv', index=False)
+                mean = round(T * 100/S, 2)
+                sector_mean[hp.mapper[sector]].append(mean)
+            if k%2 == 1:
+                header = ['Date','Nifty500']
+                row1 = [f"{pivots[k-1][0]} - {pivots[k][0]}",benchmark_data[k-1]]
+                row2 = [f"{pivots[k][0]} - {pivots[k+1][0]}",benchmark_data[k]]
+                sector_mean = dict(sorted(sector_mean.items(), key=lambda item: item[1][0]))
+                for s, mean in sector_mean.items():
+                    header.append(s)
+                    row1.append(mean[0])
+                    row2.append(mean[1])
+                data = []
+                data.extend([header, row1, row2, []])
+                pd.DataFrame(data)\
+                    .to_csv(f'{params[i]["strat"]}.csv', mode = 'a', index=False, header=False)

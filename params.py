@@ -3,20 +3,33 @@
 '''
 params = [
     {
-        "ema": 44,
-        "trend_coefficient": 0.15,
-        "adjusted_entry_coefficient": 0.01,
-        "target": 0.08,
-        "sl": 0.02,
-        "window": 50,
-        "strat": "EMA",
-        "pivot_window": [4, 6]
+      "strat": "EMA",
+      "pivot_d": None,
+      "index": "Nifty 500",
+      "ema": 44,
+      "trend_coefficient": 0.15,
+      "adjusted_entry_coefficient": 0.01,
+      "target": 0.08,
+      "sl": 0.02,
+      "window": 50,
+      "tfs": ["1d"]
     },
     # {
-    #     "strat": "index",
-    #     "pivot_window": [5, 10],
-    #     "index": "Nifty 500",
-    #     "from": '01-01-2021'
+    #   "strat": "index",
+    #   "pivot_d": [5, 10],
+    #   "index": "Nifty 500",
+    #   "from": '01-01-2021',
+    #   "tfs": ["1d"]
+    # },
+    # {
+    #   "strat": "price-action",
+    #   "pivot_d": [5, 10],
+    #   "pivot_w": [5, 10],
+    #   "pivot_m": [5, 10],
+    #   "index": "Nifty 500",
+    #   "window": 100,
+    #   "ema": 44,
+    #   "tfs": ["1d", "1wk", "1mo"]
     # }
 ]
 

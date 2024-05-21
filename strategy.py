@@ -3,7 +3,7 @@
 '''
 import helper as hp
 
-def ema(df, i, param, use_pivots, trades, potential_trades):
+def ema(df, i, param, trades):
     '''
         Checks the validity of the EMA setup and takes trade accordingly
     '''
@@ -12,7 +12,6 @@ def ema(df, i, param, use_pivots, trades, potential_trades):
     sl = param["sl"]
     target = param["target"]
     d = param["window"]
-    pivot_window = param["pivot_window"]
 
     slope1 = hp.get_slope(df, d, i)
     slope2 = hp.get_slope(df, int(d/2), int(i - d/2))
@@ -30,21 +29,9 @@ def ema(df, i, param, use_pivots, trades, potential_trades):
                         "date": df.index[i],
                     }
                 )
-            else:
-                if k == 1:
-                    return
-                else:
-                    potential_trades.append(
-                        {
-                            "entry": (1-k*e) * daily["EMA"],
-                            "target": (1 + target) * (1-k*e) * daily["EMA"],
-                            "stoploss": (1 - sl) * (1-k*e) * daily["EMA"],
-                            "multiplier": 1,
-                            "expiry": 5
-                        }
-                    )
 
-        if use_pivots:
+        if param["pivot_d"] is not None:
+            pivot_window = param["pivot_d"]
             pivots = hp.get_pivots(df, pivot_window, i - 100, i)
             if not pivots[1]["High"] or pivots[0]["High"][-1][1] > pivots[1]["High"][-1][1]:
                 target = pivots[0]["High"][-1][1]
@@ -53,37 +40,49 @@ def ema(df, i, param, use_pivots, trades, potential_trades):
             # if target/entry >= 1.05:
             #     return entry, target
 
-def index(df, pivots, benchmark_data, sector_data, row):
+def price_action():
+    '''
+        In an uptrending stock, check if the price is taking support on any pivots.
+        If yes, take a trade.
+        Support can be of types:
+            1) Retesting a high pivot after a breakout
+            2) Retesting a low pivot
+            3) Retesting a confluence of multiple pivots.
+    '''
+
+
+def index(data, pivots, benchmark_data, sector_data, row):
     '''
         Populates sector_data with the change in price of stock for each swing in the index
     '''
-    for p in enumerate(pivots):
-        p = p[0]
-        q = p + 1
-        if q >= len(pivots):
-            continue
+    for df in data.values():
+        for p in enumerate(pivots):
+            p = p[0]
+            q = p + 1
+            if q >= len(pivots):
+                continue
 
-        benchmark_change = round((pivots[q][1] - pivots[p][1]) * 100/pivots[p][1], 2)
-        benchmark_data.append(benchmark_change)
+            benchmark_change = round((pivots[q][1] - pivots[p][1]) * 100/pivots[p][1], 2)
+            benchmark_data.append(benchmark_change)
 
-        data_p = df[df.index == pivots[p][0]]
-        data_q = df[df.index == pivots[q][0]]
+            data_p = df[df.index == pivots[p][0]]
+            data_q = df[df.index == pivots[q][0]]
 
-        if not data_p.empty and not data_q.empty:
-            if pivots[p][2] == 'H':
-                delta = (data_q["Low"].values[0] - data_p["High"].values[0])/ \
-                    data_p["High"].values[0]
+            if not data_p.empty and not data_q.empty:
+                if pivots[p][2] == 'H':
+                    delta = (data_q["Low"].values[0] - data_p["High"].values[0])/ \
+                        data_p["High"].values[0]
+                else:
+                    delta = (data_q["High"].values[0] - data_p["Low"].values[0])/data_p["Low"].values[0]
+
+                delta = round(delta, 2)
             else:
-                delta = (data_q["High"].values[0] - data_p["Low"].values[0])/data_p["Low"].values[0]
+                delta = "NaN"
 
-            delta = round(delta, 2)
-        else:
-            delta = "NaN"
-
-        if row["INDUSTRY"] in sector_data:
-            if row["SYMBOL"] in sector_data[row["INDUSTRY"]]:
-                sector_data[row["INDUSTRY"]][row["SYMBOL"]].append(delta)
+            if row["INDUSTRY"] in sector_data:
+                if row["SYMBOL"] in sector_data[row["INDUSTRY"]]:
+                    sector_data[row["INDUSTRY"]][row["SYMBOL"]].append(delta)
+                else:
+                    sector_data[row["INDUSTRY"]][row["SYMBOL"]] = [delta]
             else:
-                sector_data[row["INDUSTRY"]][row["SYMBOL"]] = [delta]
-        else:
-            sector_data[row["INDUSTRY"]] = { row["SYMBOL"]: [delta] }
+                sector_data[row["INDUSTRY"]] = { row["SYMBOL"]: [delta] }
