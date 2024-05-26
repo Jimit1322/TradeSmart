@@ -46,12 +46,14 @@ def timestamp_to_date(timestamp, f = '%Y-%m-%d'):
     '''
     return timestamp.strftime(f)
 
-def get_slope(df, d, i):
+def verify_slope(df, d, i, trend):
     '''
         slope in terms of percentage for 2 price points separated over d days
     '''
+    if abs(i-d) > len(df):
+        return False
     change_percentage = (df["EMA"].iloc[i] - df["EMA"].iloc[i-d]) * 100 / df["EMA"].iloc[i-d]
-    return change_percentage/d
+    return change_percentage/d > trend
 
 def pivot_helper(df, p_window, i, result, level, multiplier):
     '''
@@ -151,13 +153,13 @@ def get_support_levels(df, p_window, bound):
     if len(df) > 100:
         start_date = df.iloc[-100].name
         start = len(df) - 100
-        slope1 = get_slope(df, 50, -1)
-        slope2 = get_slope(df, 50, -51)
+        # slope1 = get_slope(df, 50, -1)
+        # slope2 = get_slope(df, 50, -51)
     else:
         start_date = df.iloc[0].name
         start = 0
-        slope1 = get_slope(df, int(len(df)/2), -1)
-        slope2 = get_slope(df, int(len(df)/2), int(-len(df)/2) + 1)
+        # slope1 = get_slope(df, int(len(df)/2), -1)
+        # slope2 = get_slope(df, int(len(df)/2), int(-len(df)/2) + 1)
     pivots = get_pivots(df, p_window, start, len(df) - 1)
     (u, l) = (df["Close"].iloc[-1] * (1 + bound), df["Close"].iloc[-1] * (1 - bound))
     end_date = df.iloc[-1].name
@@ -175,7 +177,7 @@ def get_support_levels(df, p_window, bound):
     for pivot in pivots[::-1]:
         if (flag and date == pivot[0]) or (pivot[0] < start_date or pivot[0] > end_date):
             break
-        if pivot[1] > l and pivot[1] < u:
+        if pivot[1] > l and pivot[1] < u and df.iloc[-2]["Low"] > pivot[1]:
             valid_pivots.append(pivot)
     return valid_pivots
 

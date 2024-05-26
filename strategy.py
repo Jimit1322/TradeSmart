@@ -13,11 +13,10 @@ def ema(df, i, param, trades):
     target = param["target"]
     d = param["window"]
 
-    slope1 = hp.get_slope(df, d, i)
-    slope2 = hp.get_slope(df, int(d/2), int(i - d/2))
-
     daily = df.iloc[i]
-    if(slope1 > t and slope2 > t and df["Low"].iloc[i-1] >= df["EMA"].iloc[i-1]):
+    if(hp.verify_slope(df, d, i, t) and
+       hp.verify_slope(df, int(d/2), int(i - d/2), t) and
+       df["Low"].iloc[i-1] >= df["EMA"].iloc[i-1]):
         for k in range(1, 3):
             if((1-k*e) * daily["EMA"]  <= daily["High"] and (1-k*e) * daily["EMA"] >= daily["Low"]):
                 trades.append(

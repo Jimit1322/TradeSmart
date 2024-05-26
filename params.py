@@ -21,16 +21,18 @@ params = [
     #   "from": '01-01-2021',
     #   "tfs": ["1d"]
     # },
-    # {
-    #   "strat": "price-action",
-    #   "pivot_d": [5, 10],
-    #   "pivot_w": [5, 10],
-    #   "pivot_m": [5, 10],
-    #   "index": "Nifty 500",
-    #   "window": 100,
-    #   "ema": 44,
-    #   "tfs": ["1d", "1wk", "1mo"]
-    # }
+    {
+      "strat": "price-action",
+      "pivot_d": [5, 10],
+      "pivot_w": [5, 10],
+      "pivot_m": [5, 10],
+      "index": "Nifty 500",
+      "window": 100,
+      "ema": 44,
+      "trend_coefficient": [0.1, 0.8, 2],
+      "adjusted_entry_coefficient": [0.01, 0.04],
+      "tfs": ["1d", "1wk", "1mo"]
+    },
 ]
 
 API_KEY = 'GY7N4KU8V7BVEUNV'

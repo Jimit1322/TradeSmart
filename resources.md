@@ -1,9 +1,14 @@
 # Resources
 
 Check out the
+
 [stocks](https://archives.nseindia.com/content/equities/EQUITY_L.csv)
+
 [yahoo_api_doc](https://python-yahoofinance.readthedocs.io/en/latest/api.html)
+
 [index_data](https://medium.com/@TejasEkawade/getting-indian-stock-prices-using-python-19f8c83d2015)
+
+[Trading_Strategy](https://tradingstrategy.ai/)
 
 [Kelly's Criterion](https://www.youtube.com/watch?v=_FuuYSM7yOo)
 
