@@ -72,7 +72,8 @@ def index(data, pivots, benchmark_data, sector_data, row):
                     delta = (data_q["Low"].values[0] - data_p["High"].values[0])/ \
                         data_p["High"].values[0]
                 else:
-                    delta = (data_q["High"].values[0] - data_p["Low"].values[0])/data_p["Low"].values[0]
+                    delta = (data_q["High"].values[0] - data_p["Low"].values[0])/ \
+                        data_p["Low"].values[0]
 
                 delta = round(delta, 2)
             else:
