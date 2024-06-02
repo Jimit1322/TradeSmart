@@ -5,8 +5,9 @@ import pandas as pd
 import yfinance as yf
 import strategy as st
 import helper as hp
-from params import params
+from params import params, INDEX
 import visualise as vis
+import indicators as ind
 
 # import mplfinance as mpf
 # import matplotlib.pyplot as plt
@@ -51,6 +52,21 @@ def check_trades(trades,
 
     return profit, loss, win, lose, holding_period, cumu_return
 
+def is_ema(df_data, trend, bound, ema):
+    '''
+        Check for the EMA setup on the present candle
+    '''
+    if df_data.empty:
+        return False
+    #Creating Exponential Moving Average
+    df_data['EMA'] = ind.ema(df_data['Close'], ema)
+    upper_bound = df_data["EMA"].iloc[-1] * (1 + bound)
+    lower_bound = df_data["EMA"].iloc[-1] * (1 - bound)
+    if not (df_data["Low"].iloc[-1] > upper_bound or df_data["High"].iloc[-1] < lower_bound):
+        return hp.verify_slope(df_data, 25, -1, trend) and hp.verify_slope(df_data, 25, -26, trend)
+
+    return False
+
 def backtest(df, param):
     '''
         For each stock, scan through the historic data and check if a strategy setup is met.
@@ -83,144 +99,103 @@ def backtest(df, param):
         profit, loss = round(profit, 2), round(loss, 2)
         return win, lose, profit, loss, round(cumu_return, 2), cagr, holding_period
 
-def is_ema(df_data, trend, bound):
+def backtest_pre():
     '''
-        Check for the EMA setup on the present candle
+        Initialise the placeholders to hold backtested data
     '''
-    upper_bound = df_data["EMA"].iloc[-1] * (1 + bound)
-    lower_bound = df_data["EMA"].iloc[-1] * (1 - bound)
-    if not (df_data["Low"].iloc[-1] > upper_bound or df_data["High"].iloc[-1] < lower_bound):
-        return hp.verify_slope(df_data, 25, -1, trend) and hp.verify_slope(df_data, 25, -26, trend)
-
-    return False
-
-def check_price_action(df_data, param):
-    '''
-        Check if stock is taking support on any daily, weekly, monthly pivots
-        Reliability of pivots: monthly > weekly > daily
-    '''
-    t_f = None
-    levels = hp.get_support_levels(df_data['1mo'], param["pivot_m"], 0.01)
-    if levels:
-        t_f = "M"
-    if t_f is None:
-        levels = hp.get_support_levels(df_data['1wk'], param["pivot_w"], 0.01)
-        if levels:
-            t_f = "W"
-    if t_f is None:
-        levels = hp.get_support_levels(df_data['1d'], param["pivot_d"], 0.01)
-        if levels:
-            t_f = "D"
-
-    return t_f
-    #return t_f, levels
-
-def main():
-    '''
-        Entry point
-    '''
-    for i in enumerate(params):
-        i = i[0]
-        strat = params[i]["strat"]
-        tfs = params[i]["tfs"]
-        ema = params[i]["ema"]
-        index = params[i]["index"]
-        nifty500_stocks = pd.read_csv(f'data/{index}.csv')
-
-        if strat == "EMA":
-            data = {}
-            for tf in tfs:
-                data[tf] = \
-                    [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "Period", "CAGR"]]
-        if strat == "index":
-            pivots = hp.get_index_pivots(params[i])
+    for param in params:
+        if param["strat"] == "EMA":
+            data = [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "Period", "CAGR"]]
+        elif param['strat'] == "price-action":
+            data = [ ['Stock', 'Timeframe'] ]
+        elif param['strat'] == "index":
+            pivots = hp.get_index_pivots(param)
             sector_data = {}
-        if strat == "price-action":
-            data = [ ['Stock', 'Timeframe'], [] ]
+            benchmark_data = []
+            data = [pivots, benchmark_data, sector_data]
+        param["data"] = data
 
-        for index, row in nifty500_stocks.iterrows():
-            stock = yf.Ticker(row['SYMBOL'] + ".NS")
-            listing_date = hp.parse_date(row['DATE OF LISTING'], "%d-%b-%Y", "%Y-%m-%d")
-            df_dict = {}
-            for tf in tfs:
-                df_dict[tf] = stock.history(start=listing_date, interval=tf)
-                if df_dict[tf].empty:
+def backtest_per():
+    '''
+        Backtest the strategies
+    '''
+    nifty500_stocks = pd.read_csv(f'data/{INDEX}.csv')
+    for _, row in nifty500_stocks.iterrows():
+        stock = yf.Ticker(row['SYMBOL'] + ".NS")
+        listing_date = hp.parse_date(row['DATE OF LISTING'], "%d-%b-%Y", "%Y-%m-%d")
+        df_dict = {}
+
+        for param in params:
+            strat = param["strat"]
+            tf = param["tf"]
+            if tf in df_dict:
+                df = df_dict[tf]
+            else:
+                df = stock.history(start=listing_date, interval=tf)
+                if df.empty:
                     print("Dataframe is empty")
                     continue
-                df_dict[tf] = df_dict[tf].drop(['Dividends', 'Stock Splits'], axis = 1)
-                df_dict[tf].index = hp.timestamp_to_date(df_dict[tf].index)
-
-                #Creating Exponential Moving Average
-                df_dict[tf]['EMA'] = df_dict[tf]['Close'].ewm(span=ema,adjust=False).mean()
-
-            if strat == "index":
-                benchmark_data = []
-                st.index(df_dict, pivots, benchmark_data, sector_data, row)
+                df = df.drop(['Dividends', 'Stock Splits'], axis = 1)
+                df.index = hp.timestamp_to_date(df.index)
+                df_dict[tf] = df
 
             if strat == "EMA":
-                for k in enumerate(tfs):
-                    k = k[0]
-                    tf = tfs[k]
-                    if is_ema(df_dict[tf],
-                            0.1,
-                            params[i]["adjusted_entry_coefficient"]):
-                        s, f, p, l, c_r, c, h = backtest(df_dict[tf], params[i])
-                        if l == 0:
-                            data[tf].append([row["SYMBOL"], s, f, p, l, 0, c_r, h, c])
-                        else:
-                            data[tf].append([row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, h, c])
+                ema = param["ema"]
+                if is_ema(df,
+                        0.1,
+                        param["adjusted_entry_coefficient"],
+                        ema):
+                    s, f, p, l, c_r, c, h = backtest(df, param)
+                    if l == 0:
+                        param["data"].append([row["SYMBOL"], s, f, p, l, 0, c_r, h, c])
+                    else:
+                        param["data"].append([row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, h, c])
 
             if strat == "price-action":
-                tf = check_price_action(df_dict, params[i])
-                if tf is None:
-                    continue
-                if is_ema(df_dict[tfs[0]],
-                            params[i]["trend_coefficient"],
-                            params[i]["adjusted_entry_coefficient"]):
-                    data.insert(1, [row["SYMBOL"], tf])
-                else:
-                    data.append([row["SYMBOL"], tf])
+                levels = hp.get_support_levels(df, param["pivot"], 0.01)
+                if levels:
+                    param["data"].append([row["SYMBOL"], tf])
 
-        if strat == "index":
-            backtest_post(None, benchmark_data, sector_data, pivots)
-        else:
-            backtest_post(data, [], {}, [])
+            if strat == "index":
+                param["data"][1] = []
+                st.index(df, param["data"][0], param["data"][1], param["data"][2], row)
 
-def backtest_post(data, benchmark_data, sector_data, pivots):
+def backtest_post():
     '''
         Outputs a csv and visualises a candlestick chart for suggested stocks
     '''
-    for i in enumerate(params):
-        i = i[0]
-        if params[i]["strat"] == "EMA":
-            for tf in params[i]["tfs"]:
-                tp = sum(info[3] for info in data[tf][1:])
-                tl = sum(info[4] for info in data[tf][1:])
-                h = sum(info[7] for info in data[tf][1:])
-                c = sum(info[7] * info[8] for info in data[tf][1:])
-                w = sum(info[1] for info in data[tf][1:])
-                l = sum(info[2] for info in data[tf][1:])
+    for param in params:
+        data = param["data"]
+        if param["strat"] == "EMA":
+            tp = sum(info[3] for info in data[1:])
+            tl = sum(info[4] for info in data[1:])
+            h = sum(info[7] for info in data[1:])
+            c = sum(info[7] * info[8] for info in data[1:])
+            w = sum(info[1] for info in data[1:])
+            l = sum(info[2] for info in data[1:])
 
-                pf = cagr = 0
-                if tl != 0:
-                    pf = round(tp/tl, 2)
-                if h != 0:
-                    cagr = round(c/h, 2)
-                vis.visualise(data[tf])
-                data[tf].extend([
-                    [],
-                    ["Profit Factor", pf],
-                    ["Net CAGR", cagr],
-                    ["Total Trades", w+l],
-                    ["Winning %", w/(w+l)]
-                ])
-                pd.DataFrame(data[tf])\
-                    .to_csv(f'output/{params[i]["ema"]}{params[i]["strat"]}_{tf}.csv',
-                            index=False,
-                            header=False)
-        elif params[i]["strat"] == "price-action":
-            pd.DataFrame(data).to_csv(f'output/{params[i]["strat"]}.csv', index=False, header=False)
-        elif params[i]["strat"] == "index":
+            pf = cagr = 0
+            if tl != 0:
+                pf = round(tp/tl, 2)
+            if h != 0:
+                cagr = round(c/h, 2)
+            vis.visualise(data)
+            data.extend([
+                [],
+                ["Profit Factor", pf],
+                ["Net CAGR", cagr],
+                ["Total Trades", w+l],
+                ["Winning %", w/(w+l)]
+            ])
+            pd.DataFrame(data).to_csv(f'output/{param["ema"]}{param["strat"]}.csv',
+                                      index=False,
+                                      header=False)
+        elif param["strat"] == "price-action":
+            pd.DataFrame(data).to_csv(f'output/{param["strat"]}.csv', index=False, header=False)
+        elif param["strat"] == "index":
+            pivots = data[0]
+            benchmark_data = data[1]
+            sector_data = data[2]
             for k in enumerate(benchmark_data):
                 k = k[0]
                 if k%2 == 0:
@@ -249,7 +224,17 @@ def backtest_post(data, benchmark_data, sector_data, pivots):
                     data = []
                     data.extend([header, row1, row2, []])
                     pd.DataFrame(data)\
-                        .to_csv(f'{params[i]["strat"]}.csv', mode = 'a', index=False, header=False)
+                        .to_csv(f'{param["strat"]}.csv', mode = 'a', index=False, header=False)
+
+def main():
+    '''
+        Entry point
+    '''
+    backtest_pre()
+
+    backtest_per()
+
+    backtest_post()
 
 if __name__ == '__main__':
     main()

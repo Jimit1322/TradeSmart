@@ -1,37 +1,50 @@
 '''
   Module for defining trading parameters
 '''
+
+INDEX = "Nifty 500"
+
 params = [
     {
       "strat": "EMA",
       "pivot_d": None,
-      "index": "Nifty 500",
       "ema": 44,
       "trend_coefficient": 0.15,
       "adjusted_entry_coefficient": 0.01,
       "target": 0.08,
       "sl": 0.02,
       "window": 50,
-      "tfs": ["1d"]
+      "tf": "1d"
     },
     # {
     #   "strat": "index",
     #   "pivot_d": [5, 10],
-    #   "index": "Nifty 500",
     #   "from": '01-01-2021',
-    #   "tfs": ["1d"]
+    #   "tf": "1d"
     # },
     # {
     #   "strat": "price-action",
-    #   "pivot_d": [5, 10],
-    #   "pivot_w": [5, 10],
-    #   "pivot_m": [5, 10],
-    #   "index": "Nifty 500",
+    #   "pivot": [5, 10],
     #   "window": 100,
-    #   "ema": 44,
-    #   "trend_coefficient": [0.1, 0.8, 2],
-    #   "adjusted_entry_coefficient": [0.01, 0.04],
-    #   "tfs": ["1d", "1wk", "1mo"]
+    #   "trend_coefficient": 0.1,
+    #   "adjusted_entry_coefficient": 0.01,
+    #   "tf": "1d"
+    # },
+    # {
+    #   "strat": "price-action",
+    #   "pivot": [5, 10],
+    #   "window": 100,
+    #   "trend_coefficient": 0.8,
+    #   "adjusted_entry_coefficient": 0.04,
+    #   "tf": "1wk"
+    # },
+    # {
+    #   "strat": "price-action",
+    #   "pivot": [5, 10],
+    #   "window": 100,
+    #   "trend_coefficient": 2,
+    #   "adjusted_entry_coefficient": 0.08,
+    #   "tf": "1mo"
     # },
 ]
 
