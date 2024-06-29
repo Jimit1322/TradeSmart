@@ -4,6 +4,8 @@
 from lightweight_charts import Chart
 import yfinance as yf
 import pandas as pd
+from params import params
+import helper as hp
 
 def init_chart():
     '''
@@ -29,11 +31,11 @@ def init_table(chart: Chart, line):
                 height=1,
                 headings=('Symbol', 'Trades', 'PF', 'Return', 'CAGR'),
                 widths=(0.2, 0.2, 0.2, 0.2, 0.2),
-                alignments=('center', 'center', 'right', 'right', 'right'),
+                alignments=('center', 'center', 'center', 'center', 'center'),
                 position='left', func=lambda t: on_row_click(chart, line, t)
             )
 
-def calculate_ema(df, period: int = 44):
+def ema(df, period: int = 44):
     '''
         Caclulates Exponential Moving average for a stock
     '''
@@ -48,26 +50,33 @@ def get_historic_data(sym):
     '''
     stock = yf.Ticker(sym + ".NS")
     df = stock.history(start='2020-01-01', interval='1d')
-    return df
+    df_w = stock.history(start='2020-01-01', interval='1wk')
+    levels = hp.get_support_levels(df_w, [5, 10], 0.1)
+    return df, levels
 
-def update_chart(df, chart, line, sym):
+def update_chart(df, chart: Chart, line, sym, levels):
     '''
         Updates chart with new bar data
     '''
     line.set(
-        calculate_ema(df, period=44)
+        ema(df, period=44)
     )
+    for level in levels:
+        line = chart.horizontal_line(level[1])
+
     chart.topbar['Symbol'].set(sym)
     chart.set(df)
 
-def on_row_click(chart, line, row):
+def on_row_click(chart: Chart, line, row):
     '''
         Displays stock info for the clicked row
     '''
-    df = get_historic_data(row['Symbol'])
-    update_chart(df, chart, line, row['Symbol'])
+    if row['Symbol'] != " ":
+        chart.clear_horizontal_lines()
+        df, levels = get_historic_data(row['Symbol'])
+        update_chart(df, chart, line, row['Symbol'], levels)
 
-def visualise(stock_data):
+def visualise():
     '''
         Renders stock data in the form of candles
     '''
@@ -75,14 +84,27 @@ def visualise(stock_data):
     line = init_line(chart, 'EMA 44')
     table = init_table(chart, line)
 
-    for row in stock_data[1:]:
-        table.new_row(row[0], row[1]+row[2], row[5], row[6], row[8])
+    for param in params:
+        strat = param["strat"]
+        stock_data = param["data"]
+        r = table.new_row(" ", " ", strat, " ", " ")
+        r.background_color('Symbol', "#ffffff")
+        r.background_color('Trades', "#ffffff")
+        r.background_color('Return', "#ffffff")
+        r.background_color('CAGR', "#ffffff")
+        if strat in ["EMA", "MACD", "BTST"]:
+            for row in stock_data[1:]:
+                if not row:
+                    break
+                table.new_row(row[0], row[1]+row[2], row[5], row[6], row[8])
     chart.topbar.textbox('Symbol', '')
+    df, levels = get_historic_data(stock_data[1][0])
     update_chart(
-        get_historic_data(stock_data[1][0]),
+        df,
         chart,
         line,
-        stock_data[1][0]
+        stock_data[1][0],
+        levels
     )
 
     chart.show(block=True)
