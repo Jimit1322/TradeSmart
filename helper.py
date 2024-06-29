@@ -150,9 +150,9 @@ def get_support_levels(df, p_window, bound):
     '''
         Checks for price support in the last 100 days
     '''
-    if len(df) > 100:
-        start_date = df.iloc[-100].name
-        start = len(df) - 100
+    if len(df) > 200:
+        start_date = df.iloc[-200].name
+        start = len(df) - 200
         # slope1 = get_slope(df, 50, -1)
         # slope2 = get_slope(df, 50, -51)
     else:
@@ -164,20 +164,10 @@ def get_support_levels(df, p_window, bound):
     (u, l) = (df["Close"].iloc[-1] * (1 + bound), df["Close"].iloc[-1] * (1 - bound))
     end_date = df.iloc[-1].name
     valid_pivots = []
-    flag_low = flag = False
     for pivot in pivots[::-1]:
         if pivot[0] < start_date or pivot[0] > end_date:
             break
-        if pivot[1] < l:
-            flag_low = True
-            date = pivot[0]
-        if flag_low and pivot[1] > u:
-            flag = True
-            break
-    for pivot in pivots[::-1]:
-        if (flag and date == pivot[0]) or (pivot[0] < start_date or pivot[0] > end_date):
-            break
-        if pivot[1] > l and pivot[1] < u and df.iloc[-2]["Low"] > pivot[1]:
+        if pivot[1] > l and pivot[1] < u:
             valid_pivots.append(pivot)
     return valid_pivots
 
