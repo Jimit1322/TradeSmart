@@ -7,8 +7,8 @@ def ema(df, i, param, trades):
     '''
         Checks the validity of the EMA setup and takes trade accordingly
     '''
-    t = param["trend_coefficient"]
-    e = param["adjusted_entry_coefficient"]
+    t = param["trend"]
+    e = param["adjusted_entry"]
     sl = param["sl"]
     target = param["target"]
     d = param["window"]
@@ -26,11 +26,12 @@ def ema(df, i, param, trades):
                         "stoploss": (1 - sl) * (1-k*e) * daily["EMA"],
                         "multiplier": 1,
                         "date": df.index[i],
+                        "expiry": None
                     }
                 )
 
-        if param["pivot_d"] is not None:
-            pivot_window = param["pivot_d"]
+        if param["pivot"] is not None:
+            pivot_window = param["pivot"]
             pivots = hp.get_pivots(df, pivot_window, i - 100, i)
             if not pivots[1]["High"] or pivots[0]["High"][-1][1] > pivots[1]["High"][-1][1]:
                 target = pivots[0]["High"][-1][1]
@@ -39,16 +40,67 @@ def ema(df, i, param, trades):
             # if target/entry >= 1.05:
             #     return entry, target
 
-def price_action():
+def macd(df, i, param, trades):
     '''
-        In an uptrending stock, check if the price is taking support on any pivots.
-        If yes, take a trade.
-        Support can be of types:
-            1) Retesting a high pivot after a breakout
-            2) Retesting a low pivot
-            3) Retesting a confluence of multiple pivots.
+        If:
+            1) Uptrend (Above 200 EMA)
+            2) Both signal line and macd line below the zero line
+            3) The abs difference of the signal line and zero line is lesser than that
+               on the previous day
+        
+            Take a long trade  
     '''
+    sl = param["sl"]
+    target = param["target"]
 
+    daily = df.iloc[i]
+    prev = df.iloc[i-1]
+    if not param["can_trade"]:
+        if prev["MACD"] < prev["Signal"] and \
+            abs(daily["MACD"] - daily["Signal"]) > abs(prev["MACD"] - prev["Signal"]):
+            param["can_trade"] = True
+
+    if daily["Low"] > daily["EMA"] and \
+        daily["MACD"] < daily["Signal"] and daily["Signal"] < 0 and \
+            abs(daily["MACD"] - daily["Signal"]) <= abs(prev["MACD"] - prev["Signal"]):
+
+        if param["can_trade"]:
+            trades.append(
+                {
+                    "entry": daily["Open"],
+                    "target": (1 + target) * daily["Open"],
+                    "stoploss": (1 - sl) * daily["Open"],
+                    "multiplier": 1,
+                    "date": df.index[i],
+                    "expiry": None
+                }
+            )
+            param["can_trade"] = False
+
+def btst(df, i, param, trades):
+    '''
+        If a stock sustains a certain threshold for the day, buy it and sell the next day
+    '''
+    sl = param["sl"]
+    target = param["target"]
+
+    daily_close = df["Close"].iloc[i]
+    daily_open = df["Open"].iloc[i]
+
+    prev_close = df["Close"].iloc[i-1]
+
+    if (daily_open - prev_close) / prev_close > param["threshold"] \
+        or (daily_close - prev_close) / prev_close > param["threshold"]:
+        trades.append(
+            {
+                "entry": daily_close,
+                "target": (1 + target) * daily_close,
+                "stoploss": (1 - sl) * daily_close,
+                "multiplier": 1,
+                "date": df.index[i],
+                "expiry": 1
+            }
+        )
 
 def index(data, pivots, benchmark_data, sector_data, row):
     '''
