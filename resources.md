@@ -12,6 +12,8 @@ Check out the
 
 [Kelly's Criterion](https://www.youtube.com/watch?v=_FuuYSM7yOo)
 
+[Stock and Financials](https://financialmodelingprep.com/developer/docs/company-key-metrics-api)
+
 __f = (p/a) - (q/b)__, where
 
 f = _fraction_ of wealth invested in every trade to _maximize_ gains

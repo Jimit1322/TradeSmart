@@ -2,13 +2,13 @@
   Module for defining trading parameters
 '''
 
-INDEX = "NIFTY 500"
+INDEX = "Nifty 500"
 
 params = [
     {
       "strat": "EMA",
-      "pivot": None,
       "ema": 44,
+      "pivot": None,
       "trend": 0.15,
       "adjusted_entry": 0.01,
       "target": 0.08,
@@ -29,9 +29,7 @@ params = [
     # },
     {
       "strat": "BTST",
-      "pivot": None,
       "threshold": 0.045,
-      "ema": 44,
       "trend": 0.15,
       "adjusted_entry": 0.01,
       "target": 0.03,
@@ -39,6 +37,36 @@ params = [
       "window": 50,
       "tf": "1d"
     },
+    {
+      "strat": "Circuit",
+      "threshold": 0.045,
+      "candles": 3,
+      "trend": 0.15,
+      "adjusted_entry": 0.01,
+      "target": 0.03,
+      "sl": 0.02,
+      "window": 50,
+      "tf": "1d"
+    },
+    {
+      "strat": "Momentum",
+      "threshold": 0.0075,
+      "candles": 1,
+      "trend": 0.15,
+      "adjusted_entry": 0.01,
+      "target": 0.03,
+      "sl": 0.02,
+      "tf": "5m"
+    },
+    # {
+    #   "strat": "Dividend",
+    #   "candles": 2,
+    #   "trend": 0.15,
+    #   "adjusted_entry": 0.01,
+    #   "target": 0.03,
+    #   "sl": 0.02,
+    #   "tf": "1d"
+    # },
     # {
     #   "strat": "index",
     #   "pivot_d": [5, 10],

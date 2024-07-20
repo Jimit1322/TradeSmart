@@ -10,6 +10,10 @@ import visualise as vis
 import indicators as ind
 import suggestor as sg
 
+# import alpha_vantage
+# from stocktrends import Renko
+# import talib
+
 # import mplfinance as mpf
 # import matplotlib.pyplot as plt
 # from nsetools import Nse
@@ -57,6 +61,8 @@ def check_trades(trades,
                 #print(f"{trade['date']}\t{current_date}\t Win")
             trades.remove(trade)
             continue
+        elif trade["expiry"] is not None:
+            trade["expiry"] -= 1
 
         #If reached midway, trail the stoploss to entry price
         mid_target_price = (trade["target"] + trade["entry"]) / 2
@@ -83,6 +89,8 @@ def backtest(df, param):
         start = 1 + param["ema"]
     elif param["strat"] == "BTST":
         start = 1
+    elif param["strat"] == "Dividend":
+        start = 0
 
     for day in range(start, len(df)):
         profit, loss, win, lose, holding_period, cumu_return = check_trades(trades,
@@ -97,6 +105,8 @@ def backtest(df, param):
             st.macd(df, day, param, trades)
         elif param["strat"] == "BTST":
             st.btst(df, day, param, trades)
+        elif param["strat"] == "Dividend":
+            st.dividend(df, day, param, trades)
 
     cumu_return = cumu_return - 1
     cagr = hp.calculate_cagr(1, 1 + cumu_return, holding_period)
@@ -110,8 +120,10 @@ def backtest_pre():
         Initialise the placeholders to hold backtested data
     '''
     for param in params:
-        if param["strat"] in ["EMA", "MACD", "BTST"]:
+        if param["strat"] in ["EMA", "MACD", "BTST", "Dividend"]:
             data = [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "Period", "CAGR"]]
+        elif param["strat"] in ["Circuit", "Momentum"]:
+            data = [["Stock"]]
         elif param['strat'] == "index":
             pivots = hp.get_index_pivots(param)
             sector_data = {}
@@ -126,6 +138,7 @@ def backtest_per():
     nifty500_stocks = pd.read_csv(f'data/{INDEX}.csv')
     for _, row in nifty500_stocks.iterrows():
         stock = yf.Ticker(row['SYMBOL'] + ".NS")
+        # actions = stock.actions  # Dividends, Stock splits
         listing_date = hp.parse_date(row['DATE OF LISTING'], "%d-%b-%Y", "%Y-%m-%d")
         df_dict = {}
 
@@ -135,11 +148,14 @@ def backtest_per():
             if tf in df_dict:
                 df = df_dict[tf]
             else:
-                df = stock.history(start=listing_date, interval=tf)
+                if tf == "5m":
+                    df = stock.history(period="1mo", interval=tf)
+                else:
+                    df = stock.history(start=listing_date, interval=tf)
                 if df.empty:
                     print("Dataframe is empty")
                     continue
-                df = df.drop(['Dividends', 'Stock Splits'], axis = 1)
+                df = df.drop(['Stock Splits'], axis = 1)
                 df.index = hp.timestamp_to_date(df.index)
                 df_dict[tf] = df
 
@@ -165,6 +181,18 @@ def backtest_per():
                     param["data"].append([row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, h, c])
                 df = df.drop(columns=['MACD', 'Signal', 'EMA'])
 
+            if strat == "Dividend":
+                if "Ex-Dividend Date" not in stock.calendar:
+                    continue
+                # if sg.dividend(df, param, stock.calendar['Ex-Dividend Date']):
+                s, f, p, l, c_r, c, h = backtest(df, param)
+                if l == 0:
+                    param["data"].append([row["SYMBOL"], s, f, p, l, 0, c_r, "-", "-"])
+                else:
+                    param["data"].append(
+                        [row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, "-", "-"]
+                    )
+
             if strat == "BTST":
                 if sg.btst(df, param):
                     s, f, p, l, c_r, c, h = backtest(df, param)
@@ -174,7 +202,14 @@ def backtest_per():
                         param["data"].append(
                             [row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, "-", "-"]
                         )
-                    # param["data"].append([row["SYMBOL"], tf])
+
+            if strat == "Circuit":
+                if sg.circuit(df, param):
+                    param["data"].append([row["SYMBOL"]])
+
+            if strat == "Momentum":
+                if sg.momentum(df, param):
+                    param["data"].append([row["SYMBOL"]])
 
             if strat == "index":
                 param["data"][1] = []
@@ -182,15 +217,16 @@ def backtest_per():
 
 def backtest_post():
     '''
-        Outputs a csv and visualises a candlestick chart for suggested stocks
+        Outputs a csv for suggested stocks
     '''
     for param in params:
         data = param["data"]
-        if param["strat"] in ["EMA", "MACD", "BTST"]:
+        if param["strat"] in ["EMA", "MACD", "BTST", "Dividend"]:
             tp = sum(info[3] for info in data[1:])
             tl = sum(info[4] for info in data[1:])
-            h = 0 if param["strat"] == "BTST" else sum(info[7] for info in data[1:])
-            c = 0 if param["strat"] == "BTST" else sum(info[7] * info[8] for info in data[1:])
+            h = 0 if param["strat"] in ["BTST", "Dividend"] else sum(info[7] for info in data[1:])
+            c = 0 if param["strat"] in ["BTST", "Dividend"] else \
+                sum(info[7] * info[8] for info in data[1:])
             w = sum(info[1] for info in data[1:])
             l = sum(info[2] for info in data[1:])
 
@@ -199,16 +235,14 @@ def backtest_post():
                 pf = round(tp/tl, 2)
             if h != 0:
                 cagr = "-" if c == 0 else round(c/h, 2)
+            winning_percentage = "-" if (w+l) == 0 else w/(w+l)
             data.extend([
                 [],
                 ["Profit Factor", pf],
                 ["Net CAGR", cagr],
                 ["Total Trades", w+l],
-                ["Winning %", w/(w+l)]
+                ["Winning %", winning_percentage]
             ])
-            pd.DataFrame(data).to_csv(f'output/{param["strat"]}.csv',
-                                      index=False,
-                                      header=False)
         elif param["strat"] == "index":
             pivots = data[0]
             benchmark_data = data[1]
@@ -242,6 +276,10 @@ def backtest_post():
                     data.extend([header, row1, row2, []])
                     pd.DataFrame(data)\
                         .to_csv(f'{param["strat"]}.csv', mode = 'a', index=False, header=False)
+
+        pd.DataFrame(data).to_csv(f'output/{param["strat"]}.csv',
+                                      index=False,
+                                      header=False)
 
 def main():
     '''

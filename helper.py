@@ -146,13 +146,13 @@ def get_pivots(df, p_window, start, end):
 
     return sorted(result, key=lambda x: x[0])
 
-def get_support_levels(df, p_window, bound):
+def get_support_levels(df, p_window, window):
     '''
         Checks for price support in the last 100 days
     '''
-    if len(df) > 200:
-        start_date = df.iloc[-200].name
-        start = len(df) - 200
+    if len(df) > window:
+        start_date = df.iloc[-window].name
+        start = len(df) - window
         # slope1 = get_slope(df, 50, -1)
         # slope2 = get_slope(df, 50, -51)
     else:
@@ -161,14 +161,12 @@ def get_support_levels(df, p_window, bound):
         # slope1 = get_slope(df, int(len(df)/2), -1)
         # slope2 = get_slope(df, int(len(df)/2), int(-len(df)/2) + 1)
     pivots = get_pivots(df, p_window, start, len(df) - 1)
-    (u, l) = (df["Close"].iloc[-1] * (1 + bound), df["Close"].iloc[-1] * (1 - bound))
     end_date = df.iloc[-1].name
     valid_pivots = []
     for pivot in pivots[::-1]:
         if pivot[0] < start_date or pivot[0] > end_date:
             break
-        if pivot[1] > l and pivot[1] < u:
-            valid_pivots.append(pivot)
+        valid_pivots.append(pivot)
     return valid_pivots
 
 def get_index_pivots(param):
@@ -227,6 +225,6 @@ def calculate_cagr(begin_value, end_value, holding_period):
     '''
     if holding_period == 0:
         return 0
-    holding_period_years = holding_period/365
+    holding_period_years = holding_period/252
     cagr = ((end_value / begin_value) ** (1 / holding_period_years)) - 1
     return round(cagr * 100)
