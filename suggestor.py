@@ -10,9 +10,8 @@ def ema(df_data, trend, bound):
     if df_data.empty:
         return False
     upper_bound = df_data["EMA"].iloc[-1] * (1 + bound)
-    lower_bound = df_data["EMA"].iloc[-1] * (1 - bound)
-    if not (df_data["Low"].iloc[-1] > upper_bound or df_data["High"].iloc[-1] < lower_bound):
-        return hp.verify_slope(df_data, 25, -1, trend) and hp.verify_slope(df_data, 25, -26, trend)
+    if df_data["Low"].iloc[-1] > df_data["EMA"].iloc[-1]and df_data["Low"].iloc[-1] < upper_bound:
+        return True
 
     return False
 
