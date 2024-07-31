@@ -2,9 +2,11 @@
     Helpers
 '''
 
+import csv
 from datetime import datetime, timedelta
 from nselib import capital_market
 import pandas as pd
+from params import params
 
 mapper = {
     'Financial Services': 'Finserv', 
@@ -228,3 +230,16 @@ def calculate_cagr(begin_value, end_value, holding_period):
     holding_period_years = holding_period/252
     cagr = ((end_value / begin_value) ** (1 / holding_period_years)) - 1
     return round(cagr * 100)
+
+def csv_to_list():
+    '''
+        Converts csv data to python list data structure
+    '''
+    for param in params:
+        csv_file = f'output/{param["strat"]}.csv'
+        data = []
+        with open(csv_file, mode='r', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
+            for row in csv_reader:
+                data.append(row)
+        param["data"] = data
