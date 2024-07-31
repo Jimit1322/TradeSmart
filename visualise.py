@@ -1,7 +1,6 @@
 '''
     Candlestick chart visualiser for suggested stocks
 '''
-import csv
 from lightweight_charts import Chart
 import yfinance as yf
 import pandas as pd
@@ -95,6 +94,8 @@ def visualise():
     for param in params:
         strat = param["strat"]
         stock_data = param["data"]
+        if len(stock_data) < 2:
+            continue
         r = table.new_row(" ", " ", strat, " ", " ")
         r.background_color('Symbol', "#ffffff")
         r.background_color('Trades', "#ffffff")
@@ -113,19 +114,6 @@ def visualise():
     chart.topbar.textbox('Symbol', '')
     chart.show(block=True)
 
-def csv_to_list():
-    '''
-        Converts csv data to python list data structure
-    '''
-    for param in params:
-        csv_file = f'output/{param["strat"]}.csv'
-        data = []
-        with open(csv_file, mode='r', encoding='utf-8') as file:
-            csv_reader = csv.reader(file)
-            for row in csv_reader:
-                data.append(row)
-        param["data"] = data
-
 if __name__ == '__main__':
-    csv_to_list()
+    hp.csv_to_list()
     visualise()
