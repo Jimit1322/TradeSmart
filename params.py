@@ -58,15 +58,15 @@ params = [
       "sl": 0.02,
       "tf": "5m"
     },
-    # {
-    #   "strat": "Dividend",
-    #   "candles": 2,
-    #   "trend": 0.15,
-    #   "adjusted_entry": 0.01,
-    #   "target": 0.03,
-    #   "sl": 0.02,
-    #   "tf": "1d"
-    # },
+    {
+      "strat": "Dividend",
+      "candles": 2,
+      "trend": 0.15,
+      "adjusted_entry": 0.01,
+      "target": 0.03,
+      "sl": 0.02,
+      "tf": "1d"
+    },
     # {
     #   "strat": "index",
     #   "pivot_d": [5, 10],
