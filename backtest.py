@@ -99,14 +99,9 @@ def backtest(df, param):
                                                                             win, lose,
                                                                             holding_period,
                                                                             cumu_return)
-        if param["strat"] == "EMA":
-            st.ema(df, day, param, trades)
-        elif param["strat"] == "MACD":
-            st.macd(df, day, param, trades)
-        elif param["strat"] == "BTST":
-            st.btst(df, day, param, trades)
-        elif param["strat"] == "Dividend":
-            st.dividend(df, day, param, trades)
+
+        # Since the function name is lowercase of strat name, we can dynamically call the function
+        getattr(st, param["strat"].lower())(df, day, param, trades)
 
     cumu_return = cumu_return - 1
     cagr = hp.calculate_cagr(1, 1 + cumu_return, holding_period)
@@ -184,14 +179,14 @@ def backtest_per():
             if strat == "Dividend":
                 if "Ex-Dividend Date" not in stock.calendar:
                     continue
-                # if sg.dividend(df, param, stock.calendar['Ex-Dividend Date']):
-                s, f, p, l, c_r, c, h = backtest(df, param)
-                if l == 0:
-                    param["data"].append([row["SYMBOL"], s, f, p, l, 0, c_r, "-", "-"])
-                else:
-                    param["data"].append(
-                        [row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, "-", "-"]
-                    )
+                if sg.dividend(df, param, stock.calendar['Ex-Dividend Date']):
+                    s, f, p, l, c_r, c, h = backtest(df, param)
+                    if l == 0:
+                        param["data"].append([row["SYMBOL"], s, f, p, l, 0, c_r, "-", "-"])
+                    else:
+                        param["data"].append(
+                            [row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, "-", "-"]
+                        )
 
             if strat == "BTST":
                 if sg.btst(df, param):
@@ -217,7 +212,7 @@ def backtest_per():
 
 def backtest_post():
     '''
-        Outputs a csv for suggested stocks
+        Outputs a csv for suggested stocks and also confluences
     '''
     for param in params:
         data = param["data"]
