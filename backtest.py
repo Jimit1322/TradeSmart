@@ -89,7 +89,7 @@ def backtest(df, param):
         start = 1 + param["ema"]
     elif param["strat"] == "BTST":
         start = 1
-    elif param["strat"] == "Dividend":
+    elif param["strat"] == "DIV":
         start = 0
 
     for day in range(start, len(df)):
@@ -115,9 +115,9 @@ def backtest_pre():
         Initialise the placeholders to hold backtested data
     '''
     for param in params:
-        if param["strat"] in ["EMA", "MACD", "BTST", "Dividend"]:
+        if param["strat"] in ["EMA", "MACD", "BTST", "DIV"]:
             data = [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "Period", "CAGR"]]
-        elif param["strat"] in ["Circuit", "Momentum"]:
+        elif param["strat"] in ["CIR", "MOM"]:
             data = [["Stock"]]
         elif param['strat'] == "index":
             pivots = hp.get_index_pivots(param)
@@ -157,7 +157,6 @@ def backtest_per():
             if strat == "EMA":
                 df['EMA'] = ind.ema(df['Close'], param["ema"])
                 if sg.ema(df,
-                        0.1,
                         param["adjusted_entry"]):
                     s, f, p, l, c_r, c, h = backtest(df, param)
                     if l == 0:
@@ -176,7 +175,7 @@ def backtest_per():
                     param["data"].append([row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, h, c])
                 df = df.drop(columns=['MACD', 'Signal', 'EMA'])
 
-            if strat == "Dividend":
+            if strat == "DIV":
                 if "Ex-Dividend Date" not in stock.calendar:
                     continue
                 if sg.dividend(df, param, stock.calendar['Ex-Dividend Date']):
@@ -198,11 +197,11 @@ def backtest_per():
                             [row["SYMBOL"], s, f, p, l, round(p/l, 2), c_r, "-", "-"]
                         )
 
-            if strat == "Circuit":
+            if strat == "CIR":
                 if sg.circuit(df, param):
                     param["data"].append([row["SYMBOL"]])
 
-            if strat == "Momentum":
+            if strat == "MOM":
                 if sg.momentum(df, param):
                     param["data"].append([row["SYMBOL"]])
 
@@ -212,15 +211,15 @@ def backtest_per():
 
 def backtest_post():
     '''
-        Outputs a csv for suggested stocks and also confluences
+        Creates a csv for suggested stocks
     '''
     for param in params:
-        data = param["data"]
-        if param["strat"] in ["EMA", "MACD", "BTST", "Dividend"]:
+        data = param["data"].copy()
+        if param["strat"] in ["EMA", "MACD", "BTST", "DIV"]:
             tp = sum(info[3] for info in data[1:])
             tl = sum(info[4] for info in data[1:])
-            h = 0 if param["strat"] in ["BTST", "Dividend"] else sum(info[7] for info in data[1:])
-            c = 0 if param["strat"] in ["BTST", "Dividend"] else \
+            h = 0 if param["strat"] in ["BTST", "DIV"] else sum(info[7] for info in data[1:])
+            c = 0 if param["strat"] in ["BTST", "DIV"] else \
                 sum(info[7] * info[8] for info in data[1:])
             w = sum(info[1] for info in data[1:])
             l = sum(info[2] for info in data[1:])
