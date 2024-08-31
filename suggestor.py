@@ -3,14 +3,14 @@
 '''
 import helper as hp
 
-def ema(df_data, trend, bound):
+def ema(df, bound):
     '''
         Checks for the EMA setup based on the current candle
     '''
-    if df_data.empty:
+    if df.empty:
         return False
-    upper_bound = df_data["EMA"].iloc[-1] * (1 + bound)
-    if df_data["Low"].iloc[-1] > df_data["EMA"].iloc[-1]and df_data["Low"].iloc[-1] < upper_bound:
+    upper_bound = df["EMA"].iloc[-1] * (1 + bound)
+    if df["Close"].iloc[-1] > df["EMA"].iloc[-1] and df["Close"].iloc[-1] < upper_bound:
         return True
 
     return False
