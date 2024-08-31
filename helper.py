@@ -4,6 +4,7 @@
 
 import csv
 from datetime import datetime, timedelta
+from itertools import combinations
 from nselib import capital_market
 import pandas as pd
 from params import params
@@ -241,5 +242,40 @@ def csv_to_list():
         with open(csv_file, mode='r', encoding='utf-8') as file:
             csv_reader = csv.reader(file)
             for row in csv_reader:
+                if not row[0]:
+                    break
                 data.append(row)
         param["data"] = data
+
+def intersection_helper(l1, l2):
+    '''
+        Finds intersection of 2 lists of stocks
+    '''
+    d = {}
+    intersection = []
+    for stock in l1:
+        d[stock] = 1
+
+    for stock in l2:
+        if stock in d:
+            intersection.append(stock)
+    return intersection
+
+def find_confluences():
+    '''
+        Finds the confluence of stocks suggested by various strategies
+    '''
+    confluences = {}
+    strats = [str(i) for i in range(len(params))]
+    result = []
+    for r in range(1, len(strats) + 1):
+        comb = combinations(strats, r)
+        result.extend([''.join(c) for c in comb])
+
+    for r in result:
+        if len(r) == 1:
+            confluences[f"{r}"] = [row[0] for row in params[int(r)]["data"][1:]]
+        else:
+            confluences[f"{r}"] = intersection_helper(confluences[r[0:-1]], confluences[r[-1]])
+
+    return confluences
