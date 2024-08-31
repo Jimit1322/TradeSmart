@@ -7,8 +7,6 @@ import pandas as pd
 import helper as hp
 from params import params
 
-h_lines = []
-
 def init_chart():
     '''
         Initialise a chart
@@ -24,7 +22,7 @@ def init_line(chart: Chart, name):
     '''
     return chart.create_line(name)
 
-def init_table(chart: Chart, line):
+def init_table(chart: Chart, line, h_lines):
     '''
         Initialise a table
     '''
@@ -36,7 +34,7 @@ def init_table(chart: Chart, line):
                 alignments=('center', 'center', 'center', 'center', 'center'),
                 position='left',
                 draggable=True,
-                func=lambda t: on_row_click(chart, line, t)
+                func=lambda t: on_row_click(chart, line, t, h_lines)
             )
 
 def ema(df, period: int = 44):
@@ -58,7 +56,7 @@ def get_historic_data(sym):
     levels = hp.get_support_levels(df_w, [5, 10], 50)
     return df, levels
 
-def update_chart(df, chart: Chart, line, sym, levels):
+def update_chart(df, chart: Chart, line, sym, levels, h_lines):
     '''
         Updates chart with new bar data
     '''
@@ -75,13 +73,13 @@ def update_chart(df, chart: Chart, line, sym, levels):
     chart.topbar['Symbol'].set(sym)
     chart.set(df)
 
-def on_row_click(chart: Chart, line, row):
+def on_row_click(chart: Chart, line, row, h_lines):
     '''
         Displays stock info for the clicked row
     '''
     if row['Symbol'] != " ":
         df, levels = get_historic_data(row['Symbol'])
-        update_chart(df, chart, line, row['Symbol'], levels)
+        update_chart(df, chart, line, row['Symbol'], levels, h_lines)
 
 def visualise():
     '''
@@ -89,7 +87,7 @@ def visualise():
     '''
     chart = init_chart()
     line = init_line(chart, 'EMA 44')
-    table = init_table(chart, line)
+    table = init_table(chart, line, [])
 
     for param in params:
         strat = param["strat"]
@@ -101,7 +99,7 @@ def visualise():
         r.background_color('Trades', "#ffffff")
         r.background_color('Return', "#ffffff")
         r.background_color('CAGR', "#ffffff")
-        if strat in ["EMA", "MACD", "BTST", "Dividend"]:
+        if strat in ["EMA", "MACD", "BTST", "DIV"]:
             for row in stock_data[1:]:
                 if not row or not row[0]:
                     break
@@ -111,6 +109,9 @@ def visualise():
                 if not row or not row[0]:
                     break
                 table.new_row(row[0], "-", "-", "-", "-")
+
+    confluences = hp.find_confluences()
+
     chart.topbar.textbox('Symbol', '')
     chart.show(block=True)
 
