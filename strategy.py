@@ -102,7 +102,7 @@ def btst(df, i, param, trades):
             }
         )
 
-def dividend(df, i, param, trades):
+def div(df, i, param, trades):
     '''
         If a stock is having dividends in x days, buy today and sell 1 day before the ex-date
         (if target or SL is not hit)
