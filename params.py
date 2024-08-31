@@ -1,5 +1,5 @@
 '''
-  Module for defining trading parameters
+  Module for defining trading parameters for strategies
 '''
 
 INDEX = "Nifty 500"
@@ -38,7 +38,7 @@ params = [
       "tf": "1d"
     },
     {
-      "strat": "Circuit",
+      "strat": "CIR",
       "threshold": 0.045,
       "candles": 3,
       "trend": 0.15,
@@ -49,7 +49,7 @@ params = [
       "tf": "1d"
     },
     {
-      "strat": "Momentum",
+      "strat": "MOM",
       "threshold": 0.0075,
       "candles": 1,
       "trend": 0.15,
@@ -59,7 +59,7 @@ params = [
       "tf": "5m"
     },
     {
-      "strat": "Dividend",
+      "strat": "DIV",
       "candles": 2,
       "trend": 0.15,
       "adjusted_entry": 0.01,
