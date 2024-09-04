@@ -2,6 +2,7 @@
     Helpers
 '''
 
+from pathlib import Path
 import csv
 from datetime import datetime, timedelta
 from itertools import combinations
@@ -153,6 +154,8 @@ def get_support_levels(df, p_window, window):
     '''
         Checks for price support in the last 100 days
     '''
+    if df.empty:
+        return None
     if len(df) > window:
         start_date = df.iloc[-window].name
         start = len(df) - window
@@ -232,9 +235,27 @@ def calculate_cagr(begin_value, end_value, holding_period):
     cagr = ((end_value / begin_value) ** (1 / holding_period_years)) - 1
     return round(cagr * 100)
 
-def csv_to_list():
+def csv_to_list(sector):
     '''
-        Converts csv data to python list data structure
+        Converts csv sector data to python list data structure
+    '''
+    sector_data = {}
+    directory_path = Path(f"data/{sector}")
+    for item in directory_path.iterdir():
+        if item.is_file():
+            data = []
+            with item.open('r') as file:
+                csv_reader = csv.reader(file)
+                for row in csv_reader:
+                    if not row[0]:
+                        break
+                    data.append(row)
+            sector_data[item.name.split('.')[0]] = data
+    return sector_data
+
+def csv_recommend_to_list():
+    '''
+        Converts csv stock recommendation data to python list data structure
     '''
     for param in params:
         csv_file = f'output/{param["strat"]}.csv'
