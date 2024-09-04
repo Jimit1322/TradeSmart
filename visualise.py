@@ -1,11 +1,15 @@
 '''
     Candlestick chart visualiser for suggested stocks
 '''
+import sys
 from lightweight_charts import Chart
 import yfinance as yf
 import pandas as pd
 import helper as hp
 from params import params
+
+sector_stocks = None
+sector = None
 
 def init_chart():
     '''
@@ -26,16 +30,27 @@ def init_table(chart: Chart, line, h_lines):
     '''
         Initialise a table
     '''
-    return chart.create_table(
-                width=0.3,
-                height=1,
-                headings=('Symbol', 'Trades', 'PF', 'Return', 'CAGR'),
-                widths=(0.2, 0.2, 0.2, 0.2, 0.2),
-                alignments=('center', 'center', 'center', 'center', 'center'),
-                position='left',
-                draggable=True,
-                func=lambda t: on_row_click(chart, line, t, h_lines)
-            )
+    if sector_stocks:
+        return chart.create_table(
+                    width=0.3,
+                    height=1,
+                    headings=(sector.upper(), ''),
+                    alignments=('center', 'center'),
+                    position='left',
+                    draggable=True,
+                    func=lambda t: on_row_click(chart, line, t, h_lines)
+                )
+    else:
+        return chart.create_table(
+                    width=0.3,
+                    height=1,
+                    headings=('Symbol', 'Trades', 'PF', 'Return', 'CAGR'),
+                    widths=(0.2, 0.2, 0.2, 0.2, 0.2),
+                    alignments=('center', 'center', 'center', 'center', 'center'),
+                    position='left',
+                    draggable=True,
+                    func=lambda t: on_row_click(chart, line, t, h_lines)
+                )
 
 def ema(df, period: int = 44):
     '''
@@ -77,9 +92,13 @@ def on_row_click(chart: Chart, line, row, h_lines):
     '''
         Displays stock info for the clicked row
     '''
-    if row['Symbol'] != " ":
-        df, levels = get_historic_data(row['Symbol'])
-        update_chart(df, chart, line, row['Symbol'], levels, h_lines)
+    heading = 'Symbol'
+    if sector:
+        heading = sector.upper()
+    if row[heading] != " ":
+        df, levels = get_historic_data(row[heading])
+        if levels:
+            update_chart(df, chart, line, row[heading], levels, h_lines)
 
 def visualise():
     '''
@@ -88,33 +107,45 @@ def visualise():
     chart = init_chart()
     line = init_line(chart, 'EMA 44')
     table = init_table(chart, line, [])
+    if sector_stocks:
+        for key, data in sector_stocks.items():
+            r = table.new_row(key)
+            r.background_color(sector.upper(), "#0000ff")
+            r.text_color(sector.upper(), "#00ff00")
+            for row in data[1:]:
+                table.new_row(row[0])
+    else:
+        for param in params:
+            strat = param["strat"]
+            stock_data = param["data"]
+            if len(stock_data) < 2:
+                continue
+            r = table.new_row(" ", " ", strat, " ", " ")
+            r.background_color('Symbol', "#ffffff")
+            r.background_color('Trades', "#ffffff")
+            r.background_color('Return', "#ffffff")
+            r.background_color('CAGR', "#ffffff")
+            if strat in ["EMA", "MACD", "BTST", "DIV"]:
+                for row in stock_data[1:]:
+                    if not row or not row[0]:
+                        break
+                    table.new_row(row[0], row[1]+row[2], row[5], row[6], row[8])
+            else:
+                for row in stock_data[1:]:
+                    if not row or not row[0]:
+                        break
+                    table.new_row(row[0], "-", "-", "-", "-")
 
-    for param in params:
-        strat = param["strat"]
-        stock_data = param["data"]
-        if len(stock_data) < 2:
-            continue
-        r = table.new_row(" ", " ", strat, " ", " ")
-        r.background_color('Symbol', "#ffffff")
-        r.background_color('Trades', "#ffffff")
-        r.background_color('Return', "#ffffff")
-        r.background_color('CAGR', "#ffffff")
-        if strat in ["EMA", "MACD", "BTST", "DIV"]:
-            for row in stock_data[1:]:
-                if not row or not row[0]:
-                    break
-                table.new_row(row[0], row[1]+row[2], row[5], row[6], row[8])
-        else:
-            for row in stock_data[1:]:
-                if not row or not row[0]:
-                    break
-                table.new_row(row[0], "-", "-", "-", "-")
-
-    confluences = hp.find_confluences()
+        confluences = hp.find_confluences()
 
     chart.topbar.textbox('Symbol', '')
     chart.show(block=True)
 
 if __name__ == '__main__':
-    hp.csv_to_list()
+    n = len(sys.argv)
+    if n == 1:
+        hp.csv_recommend_to_list()
+    else:
+        sector = sys.argv[1]
+        sector_stocks = hp.csv_to_list(sector)
     visualise()
