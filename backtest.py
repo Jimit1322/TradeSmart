@@ -144,13 +144,21 @@ def backtest_per():
                 df = df_dict[tf]
             else:
                 if tf == "5m":
-                    df = stock.history(period="1mo", interval=tf)
+                    try:
+                        df = stock.history(period="1mo", interval=tf)
+                    except Exception as e:
+                        print(e)
+                        print(row['SYMBOL'])
                 else:
                     df = stock.history(start=listing_date, interval=tf)
                 if df.empty:
                     print("Dataframe is empty")
                     continue
-                df = df.drop(['Stock Splits'], axis = 1)
+                try:
+                    df = df.drop(['Stock Splits'], axis = 1)
+                except Exception as e:
+                    print(e)
+
                 df.index = hp.timestamp_to_date(df.index)
                 df_dict[tf] = df
 
