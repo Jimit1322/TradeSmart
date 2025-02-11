@@ -103,7 +103,7 @@ CELLO,Cello World Limited,EQ,06-NOV-2023,5,1,INE0LMW01024,5,Consumer Durables
 CENTRALBK,Central Bank of India,EQ,21-AUG-2007,10,1,INE483A01010,10,Financial Services
 CDSL,Central Depository Services (India) Limited,EQ,30-JUN-2017,10,1,INE736A01011,10,Financial Services
 CENTURYPLY,Century Plyboards (India) Limited,EQ,23-MAR-2006,1,1,INE348B01021,1,Consumer Durables
-CENTURYTEX,Century Textiles & Industries Limited,EQ,27-JUN-2003,10,1,INE055A01016,10,Forest Materials
+ABREL,Century Textiles & Industries Limited,EQ,27-JUN-2003,10,1,INE055A01016,10,Forest Materials
 CERA,Cera Sanitaryware Limited,EQ,02-NOV-2007,5,1,INE739E01017,5,Consumer Durables
 CHALET,Chalet Hotels Limited,EQ,07-FEB-2019,10,1,INE427F01016,10,Consumer Services
 CHAMBLFERT,Chambal Fertilizers & Chemicals Limited,EQ,14-JUN-1995,10,1,INE085A01013,10,Chemicals
@@ -167,7 +167,7 @@ FIVESTAR,Five-Star Business Finance Limited,EQ,21-NOV-2022,1,1,INE128S01021,1,Fi
 FORTIS,Fortis Healthcare Limited,EQ,09-MAY-2007,10,1,INE061F01013,10,Healthcare
 GAIL,GAIL (India) Limited,EQ,02-APR-1997,10,1,INE129A01019,10,Oil Gas & Consumable Fuels
 GMMPFAUDLR,GMM Pfaudler Limited,EQ,05-MAR-2018,2,1,INE541A01023,2,Capital Goods
-GMRINFRA,GMR Airports Infrastructure Limited,EQ,21-AUG-2006,1,1,INE776C01039,1,Services
+GMRAIRPORT,GMR Airports Infrastructure Limited,EQ,21-AUG-2006,1,1,INE776C01039,1,Services
 GRSE,Garden Reach Shipbuilders & Engineers Limited,EQ,10-OCT-2018,10,1,INE382Z01011,10,Capital Goods
 GICRE,General Insurance Corporation of India,EQ,25-OCT-2017,5,1,INE481Y01014,5,Financial Services
 GILLETTE,Gillette India Limited,EQ,30-JUL-2003,10,1,INE322A01010,10,Fast Moving Consumer Goods
@@ -435,7 +435,6 @@ SUZLON,Suzlon Energy Limited,BE,19-OCT-2005,2,1,INE040H01021,2,Capital Goods
 SWANENERGY,Swan Energy Limited,EQ,29-MAY-2012,1,1,INE665A01038,1,Diversified
 SYNGENE,Syngene International Limited,EQ,11-AUG-2015,10,1,INE398R01022,10,Healthcare
 SYRMA,Syrma SGS Technology Limited,EQ,26-AUG-2022,10,1,INE0DYJ01015,10,Capital Goods
-TV18BRDCST,TV18 Broadcast Limited,EQ,08-FEB-2007,2,1,INE886H01027,2,Media Entertainment & Publication
 TVSMOTOR,TVS Motor Company Limited,EQ,02-AUG-2000,1,1,INE494B01023,1,Automobile and Auto Components
 TVSSCS,TVS Supply Chain Solutions Limited,EQ,23-AUG-2023,1,1,INE395N01027,1,Services
 TMB,Tamilnad Mercantile Bank Limited,EQ,15-SEP-2022,10,1,INE668A01016,10,Financial Services
@@ -446,7 +445,6 @@ TCS,Tata Consultancy Services Limited,EQ,25-AUG-2004,1,1,INE467B01029,1,Informat
 TATACONSUM,TATA CONSUMER PRODUCTS LIMITED,EQ,18-NOV-1998,1,1,INE192A01025,1,Fast Moving Consumer Goods
 TATAELXSI,Tata Elxsi Limited,EQ,17-SEP-2003,10,1,INE670A01012,10,Information Technology
 TATAINVEST,Tata Investment Corporation Limited,BE,24-JUN-1998,10,1,INE672A01018,10,Financial Services
-TATAMTRDVR,Tata Motors Limited,EQ,05-NOV-2008,2,1,IN9155A01020,2,Automobile and Auto Components
 TATAMOTORS,Tata Motors Limited,EQ,22-JUL-1998,2,1,INE155A01022,2,Automobile and Auto Components
 TATAPOWER,Tata Power Company Limited,EQ,03-APR-1996,1,1,INE245A01021,1,Power
 TATASTEEL,Tata Steel Limited,EQ,18-NOV-1998,1,1,INE081A01020,1,Metals & Mining
