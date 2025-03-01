@@ -91,6 +91,7 @@ def filter_pivots(pivots):
     filtered_pivots = []
     high = 0
     low = float('inf')
+    high_tup = low_tup = []
     for i in enumerate(pivots):
         i = i[0]
         if pivots[i][2] == 'L':

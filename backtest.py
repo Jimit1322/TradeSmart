@@ -3,6 +3,7 @@
 '''
 import pandas as pd
 import yfinance as yf
+import requests
 import strategy as st
 import helper as hp
 from params import params, INDEX
@@ -82,6 +83,7 @@ def backtest(df, param):
     trades = []
     holding_period = 0
     cumu_return = 1
+    start = 0
 
     if param["strat"] == "EMA":
         start = 100 + param["ema"]
@@ -89,8 +91,6 @@ def backtest(df, param):
         start = 1 + param["ema"]
     elif param["strat"] == "BTST":
         start = 1
-    elif param["strat"] == "DIV":
-        start = 0
 
     for day in range(start, len(df)):
         profit, loss, win, lose, holding_period, cumu_return = check_trades(trades,
@@ -114,6 +114,7 @@ def backtest_pre():
     '''
         Initialise the placeholders to hold backtested data
     '''
+    data = []
     for param in params:
         if param["strat"] in ["EMA", "MACD", "BTST", "DIV"]:
             data = [["Stock", "Win", "Lose", "Profit", "Loss", "PF", "Return", "Period", "CAGR"]]
@@ -146,9 +147,11 @@ def backtest_per():
                 if tf == "5m":
                     try:
                         df = stock.history(period="1mo", interval=tf)
-                    except Exception as e:
-                        print(e)
+                    except ValueError as e:
+                        print(f"ValueError: {e}")
                         print(row['SYMBOL'])
+                    except requests.exceptions.RequestException as e:
+                        print(f"Network-related error: {e}")
                 else:
                     df = stock.history(start=listing_date, interval=tf)
                 if df.empty:
@@ -156,7 +159,7 @@ def backtest_per():
                     continue
                 try:
                     df = df.drop(['Stock Splits'], axis = 1)
-                except Exception as e:
+                except KeyError as e:
                     print(e)
 
                 df.index = hp.timestamp_to_date(df.index)
@@ -251,8 +254,7 @@ def backtest_post():
             sector_data = data[2]
             for k in enumerate(benchmark_data):
                 k = k[0]
-                if k%2 == 0:
-                    sector_mean = {}
+                sector_mean = {}
                 for sector, stocks in sector_data.items():
                     t = 0
                     s = 0
