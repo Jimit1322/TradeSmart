@@ -2,7 +2,7 @@
   Module for defining trading parameters for strategies
 '''
 
-INDEX = "Nifty 500"
+INDEX = "nifty50"
 
 params = [
     {
